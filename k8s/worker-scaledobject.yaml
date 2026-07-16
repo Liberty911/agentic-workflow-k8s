@@ -1,0 +1,32 @@
+---
+# TriggerAuthentication — tells KEDA how to connect to Redis.
+# Our Redis has no password (fine for local kind development), so this
+# is intentionally minimal. If you add Redis AUTH later, the password
+# would be referenced here via a secretTargetRef instead.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-trigger-auth
+spec:
+  secretTargetRef: []
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaledobject
+spec:
+  scaleTargetRef:
+    name: worker              # must match the Deployment name exactly
+  pollingInterval: 5           # how often (seconds) KEDA checks queue depth
+  cooldownPeriod: 30           # wait this long after last activity before scaling to 0
+  minReplicaCount: 0           # the whole point — scale to zero when idle
+  maxReplicaCount: 5           # cap, tune based on your laptop's CPU headroom
+  triggers:
+    - type: redis
+      metadata:
+        address: redis.default.svc.cluster.local:6379
+        listName: agent:tasks       # must match QUEUE_KEY in queue_client.py
+        listLength: "1"              # target: 1 task per replica
+        activationListLength: "0"    # scale up from 0 as soon as 1 task appears
+      authenticationRef:
+        name: redis-trigger-auth
