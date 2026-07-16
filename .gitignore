@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.env
+*.key
+secrets.yaml
+kubeconfig
+*.kubeconfig
+.DS_Store
+*.log
+*.tar

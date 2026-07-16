@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  labels:
+    app: worker
+spec:
+  replicas: 1
+  # Fixed at 1 for now — this is what KEDA's ScaledObject will later
+  # take control of (0→N based on Redis queue depth). Proving the
+  # task lifecycle works at a fixed replica count first, before adding
+  # the extra moving part of autoscaling on top.
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: localhost/agentic-worker:v1
+          imagePullPolicy: Never
+          envFrom:
+            # Reuses the same secret as the orchestrator — it already
+            # holds GROQ_API_KEY, which only the worker actually needs
+            # now that the orchestrator is a thin enqueue-only API.
+            - secretRef:
+                name: orchestrator-secrets
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"

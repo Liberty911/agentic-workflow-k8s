@@ -1,0 +1,6 @@
+langgraph==0.6.11
+langchain-groq==0.3.8
+langchain-core==0.3.86
+python-dotenv==1.2.1
+ddgs==9.8.0
+redis==7.0.1
