@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agentic-workflow
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Liberty911/agentic-workflow-k8s.git
+    targetRevision: main
+    path: k8s
+    directory:
+      # create-secret.sh lives alongside the manifests but isn't a
+      # Kubernetes resource — Argo CD would otherwise try to parse it
+      # as one and fail.
+      exclude: "create-secret.sh"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    automated:
+      prune: true      # remove resources from the cluster if removed from git
+      selfHeal: true    # revert manual kubectl changes back to match git
+    syncOptions:
+      - CreateNamespace=false
+
+  # Without this, Argo CD's selfHeal would fight KEDA: KEDA changes
+  # worker replicas 0-5 based on queue depth, git says replicas: 1,
+  # and every sync Argo CD would snap it back to 1 — breaking
+  # autoscaling entirely. This tells Argo CD "don't manage this field,
+  # KEDA owns it."
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: worker
+      jsonPointers:
+        - /spec/replicas
